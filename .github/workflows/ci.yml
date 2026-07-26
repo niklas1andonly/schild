@@ -1,0 +1,31 @@
+name: CI
+
+# Läuft bei jedem Push und jedem Pull Request. Der Grund ist der Inhalt:
+# `priorities.js` rechnet nach jeder gewählten Maßnahme neu, eine neue Maßnahme
+# verschiebt also die Reihenfolge aller anderen. Ohne diesen Lauf fällt das erst
+# jemandem im fertigen Bericht auf.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Katalogverweise, Engine-Invarianten, Golden-Snapshots.
+      - run: npm test
+
+      # Der Build setzt die Content-Security-Policy in index.html — schlägt er
+      # fehl, wäre die Demo ohne ihre eigentliche Zusage online.
+      - run: npm run build

@@ -1,0 +1,6 @@
+# Zeilenenden im Repository immer LF — sonst erzeugt jeder Klon unter Windows
+# einen Diff über die ganze Datei.
+* text=auto eol=lf
+*.woff2 binary
+*.png binary
+*.jpg binary

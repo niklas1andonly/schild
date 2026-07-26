@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Höhe der klebenden Kopfzeile. Der Fortschrittsbalken im Fragebogen
+       dockt daran an — vorher stand dort eine feste Pixelzahl, die bei
+       vergrößerter Schrift auseinanderlief. */
+    --header-h: 3.5rem;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-base text-text font-sans antialiased;
+    /* Dezenter Raster-Hintergrund — "Lagebild"-Anmutung ohne Neon-Kitsch. */
+    background-image:
+      radial-gradient(60rem 40rem at 50% -10rem, rgba(61, 220, 154, 0.07), transparent 60%),
+      linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+    background-size: 100% 100%, 48px 48px, 48px 48px;
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    @apply bg-accent/30 text-white;
+  }
+
+  /* Fokus-Ringe global sichtbar halten — Tastaturbedienung ist Teil der Qualität. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent/60 ring-offset-2 ring-offset-base;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line bg-panel/80 backdrop-blur-sm;
+  }
+
+  .card-inset {
+    @apply rounded-xl border border-line bg-panel2/60;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-line2
+           bg-panel2 px-4 py-2.5 text-sm font-semibold text-text transition
+           hover:border-accent/50 hover:text-white
+           disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-line2
+           disabled:hover:text-text;
+  }
+
+  .btn-primary {
+    @apply border-accent/40 bg-accent/15 text-accent hover:bg-accent/25 hover:text-accent;
+  }
+
+  .btn-ghost {
+    @apply border-transparent bg-transparent text-muted hover:border-line2 hover:text-text;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+
+  .label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.16em] text-faint;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-line2 bg-panel2
+           px-2.5 py-1 text-[11px] font-medium text-muted;
+  }
+
+  /* Auswahl-Kachel im Fragebogen. */
+  .choice {
+    @apply w-full rounded-xl border border-line bg-panel2/50 px-4 py-3 text-left text-sm
+           transition hover:border-line2 hover:bg-panel2;
+  }
+
+  .choice-active {
+    @apply border-accent/60 bg-accent/10 text-white;
+  }
+
+  .prose-sec {
+    @apply text-sm leading-relaxed text-muted;
+  }
+
+  .prose-sec strong {
+    @apply font-semibold text-text;
+  }
+}
+
+@layer utilities {
+  .tabnums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Wer Bewegung im Betriebssystem abgeschaltet hat, meint es ernst — hier läuft
+   sonst unter anderem eine Endlos-Animation. Betroffene reagieren darauf mit
+   Übelkeit oder Schwindel, nicht mit Geschmacksfragen. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Druck-/PDF-Ausgabe: heller Report ohne UI-Chrom. */
+@media print {
+  body {
+    background: #fff !important;
+    color: #111 !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .card,
+  .card-inset {
+    border-color: #ccc !important;
+    background: #fff !important;
+    break-inside: avoid;
+  }
+}

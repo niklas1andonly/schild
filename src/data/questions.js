@@ -1,0 +1,1045 @@
+// ---------------------------------------------------------------------------
+// Fragenkatalog
+// ---------------------------------------------------------------------------
+// Jede Frage hat eine stabile `id` — die Engine (threats/actions/twin) greift
+// ausschließlich über diese IDs auf Antworten zu. IDs also nicht umbenennen,
+// ohne die Engine mitzuziehen.
+//
+// type:   'single' (eine Option) | 'multi' (mehrere) | 'scale' (1..5)
+// core:   Teil des Kurz-Audits (~18 Fragen). Ohne core-Flag nur im Voll-Audit.
+// showIf: (answers) => boolean — Folgefrage, wird sonst übersprungen.
+// ---------------------------------------------------------------------------
+
+/** Hilfsfunktion: ist `val` in einer Multi-Antwort enthalten? */
+export const has = (answers, id, val) => {
+  const v = answers[id]
+  return Array.isArray(v) ? v.includes(val) : v === val
+}
+
+/** Hilfsfunktion: ist eine der Optionen gewählt? */
+export const hasAny = (answers, id, vals) => vals.some((v) => has(answers, id, v))
+
+export const SECTIONS = [
+  {
+    id: 'about',
+    title: 'Über dich',
+    lead: 'Wer du bist, entscheidet, wer sich für dich interessiert.',
+    icon: 'user',
+  },
+  {
+    id: 'devices',
+    title: 'Deine Geräte',
+    lead: 'Die Angriffsfläche, die du jeden Tag anfasst.',
+    icon: 'laptop',
+  },
+  {
+    id: 'accounts',
+    title: 'Konten & Passwörter',
+    lead: 'Hier entscheidet sich für die meisten Menschen alles.',
+    icon: 'key',
+  },
+  {
+    id: 'money',
+    title: 'Geld & Werte',
+    lead: 'Was ein Angreifer bei dir tatsächlich zu holen hätte.',
+    icon: 'card',
+  },
+  {
+    id: 'behavior',
+    title: 'Alltag & Verhalten',
+    lead: 'Die meisten Vorfälle beginnen mit einer ganz normalen Handlung.',
+    icon: 'pin',
+  },
+  {
+    id: 'home',
+    title: 'Zuhause & Netzwerk',
+    lead: 'Dein Router ist das Gerät, an das niemand denkt.',
+    icon: 'home',
+  },
+  {
+    id: 'data',
+    title: 'Daten & Vorsorge',
+    lead: 'Nicht jeder Schaden kommt von einem Angreifer.',
+    icon: 'folder',
+  },
+]
+
+export const QUESTIONS = [
+  // ---------------------------------------------------------------- about ---
+  {
+    id: 'age',
+    section: 'about',
+    core: true,
+    type: 'single',
+    q: 'Wie alt bist du?',
+    help: 'Alter verschiebt, welche Betrugsmaschen bei dir realistisch ankommen — nicht, wie schlau du bist.',
+    options: [
+      { v: 'u18', label: 'Unter 18' },
+      { v: '18-29', label: '18 – 29' },
+      { v: '30-49', label: '30 – 49' },
+      { v: '50-64', label: '50 – 64' },
+      { v: '65plus', label: '65 oder älter' },
+    ],
+  },
+  {
+    id: 'job',
+    section: 'about',
+    core: true,
+    type: 'single',
+    q: 'Was beschreibt deine berufliche Situation am besten?',
+    options: [
+      { v: 'student', label: 'Schüler:in / Student:in' },
+      { v: 'office', label: 'Angestellt, Büro / Verwaltung' },
+      { v: 'it', label: 'IT / Technik / Entwicklung' },
+      { v: 'finance-legal', label: 'Finanzen, Recht, Steuern' },
+      { v: 'health', label: 'Gesundheitswesen' },
+      { v: 'public', label: 'Öffentlicher Dienst, Bildung' },
+      { v: 'trades', label: 'Handwerk, Produktion, Logistik' },
+      { v: 'selfemployed', label: 'Selbstständig / eigenes Unternehmen' },
+      { v: 'creator', label: 'Medien, Content, Öffentlichkeitsarbeit' },
+      { v: 'retired', label: 'Ruhestand' },
+      { v: 'other', label: 'Etwas anderes' },
+    ],
+  },
+  {
+    id: 'techlevel',
+    section: 'about',
+    core: true,
+    type: 'scale',
+    q: 'Wie technikaffin bist du?',
+    help: 'Ehrlich sein hilft: Empfehlungen, die du nicht umsetzt, sind wertlos.',
+    scale: [
+      { v: 1, label: 'Ich lasse mir helfen' },
+      { v: 2, label: 'Grundlagen' },
+      { v: 3, label: 'Komme gut klar' },
+      { v: 4, label: 'Technisch versiert' },
+      { v: 5, label: 'Beruflich in der IT' },
+    ],
+  },
+  {
+    id: 'household',
+    section: 'about',
+    core: true,
+    type: 'multi',
+    q: 'Wie lebst du?',
+    help: 'Mehrfachauswahl möglich.',
+    options: [
+      { v: 'alone', label: 'Allein' },
+      { v: 'partner', label: 'Mit Partner:in' },
+      { v: 'kids', label: 'Mit Kindern im Haushalt' },
+      { v: 'shared', label: 'WG / geteilte Wohnung' },
+      { v: 'elderly', label: 'Ich betreue ältere Angehörige (auch technisch)' },
+    ],
+  },
+  {
+    id: 'kids_age',
+    section: 'about',
+    type: 'multi',
+    q: 'Wie alt sind die Kinder?',
+    showIf: (a) => has(a, 'household', 'kids'),
+    options: [
+      { v: 'u6', label: 'Unter 6' },
+      { v: '6-12', label: '6 – 12' },
+      { v: '13-17', label: '13 – 17' },
+    ],
+  },
+  {
+    id: 'kids_devices',
+    section: 'about',
+    type: 'single',
+    q: 'Haben die Kinder eigene Geräte mit Internetzugang?',
+    showIf: (a) => has(a, 'household', 'kids'),
+    options: [
+      { v: 'own-managed', label: 'Ja, mit eingerichteter Kindersicherung' },
+      { v: 'own-unmanaged', label: 'Ja, ohne besondere Einstellungen' },
+      { v: 'shared', label: 'Nur gemeinsam genutzte Geräte' },
+      { v: 'none', label: 'Nein' },
+    ],
+  },
+  {
+    id: 'public_role',
+    section: 'about',
+    type: 'multi',
+    q: 'Trifft etwas davon auf dich zu?',
+    help: 'Das verschiebt dich von "zufälliges Ziel" zu "ausgesuchtes Ziel". Mehrfachauswahl.',
+    options: [
+      { v: 'none', label: 'Nichts davon', exclusive: true },
+      { v: 'local-public', label: 'Ich bin lokal bekannt (Verein, Politik, Ehrenamt)' },
+      { v: 'creator', label: 'Ich habe eine öffentliche Reichweite (Social Media, Podcast, Blog)' },
+      { v: 'job-exposed', label: 'Mein Beruf macht mich angreifbar (Presse, Justiz, Medizin, Behörde)' },
+      { v: 'wealth', label: 'Ich habe überdurchschnittliches Vermögen' },
+      { v: 'access', label: 'Ich habe beruflich Zugriff auf kritische Systeme oder Daten' },
+      { v: 'conflict', label: 'Es gibt Personen, die mir schaden wollen (Ex-Partner, Streit, Stalking)' },
+    ],
+  },
+
+  // -------------------------------------------------------------- devices ---
+  {
+    id: 'phone_os',
+    section: 'devices',
+    core: true,
+    type: 'single',
+    q: 'Welches Smartphone nutzt du?',
+    options: [
+      { v: 'ios', label: 'iPhone' },
+      { v: 'android', label: 'Android' },
+      { v: 'both', label: 'Beides (mehrere Geräte)' },
+      { v: 'feature', label: 'Ein einfaches Handy ohne Apps' },
+      { v: 'none', label: 'Keins' },
+    ],
+  },
+  {
+    id: 'phone_age',
+    section: 'devices',
+    type: 'single',
+    q: 'Wie alt ist dein Haupt-Smartphone ungefähr?',
+    help: 'Entscheidend ist nicht das Alter, sondern ob es noch Sicherheitsupdates bekommt.',
+    showIf: (a) => !has(a, 'phone_os', 'none'),
+    options: [
+      { v: 'u2', label: 'Unter 2 Jahre' },
+      { v: '2-4', label: '2 – 4 Jahre' },
+      { v: 'o4', label: 'Älter als 4 Jahre' },
+      { v: 'unknown', label: 'Weiß ich nicht' },
+    ],
+  },
+  {
+    id: 'computer_os',
+    section: 'devices',
+    core: true,
+    type: 'single',
+    q: 'Welchen Computer nutzt du hauptsächlich?',
+    options: [
+      { v: 'windows', label: 'Windows-PC / Laptop' },
+      { v: 'mac', label: 'Mac' },
+      { v: 'linux', label: 'Linux' },
+      { v: 'chromeos', label: 'Chromebook' },
+      { v: 'mixed', label: 'Mehrere verschiedene' },
+      { v: 'none', label: 'Keinen — nur Smartphone/Tablet' },
+    ],
+  },
+  {
+    id: 'windows_version',
+    section: 'devices',
+    type: 'single',
+    q: 'Welche Windows-Version?',
+    showIf: (a) => hasAny(a, 'computer_os', ['windows', 'mixed']),
+    options: [
+      { v: 'win11', label: 'Windows 11' },
+      { v: 'win10', label: 'Windows 10' },
+      { v: 'older', label: 'Älter als Windows 10' },
+      { v: 'unknown', label: 'Weiß ich nicht' },
+    ],
+  },
+  {
+    id: 'device_count',
+    section: 'devices',
+    core: true,
+    type: 'single',
+    q: 'Wie viele Geräte von dir hängen insgesamt am Internet?',
+    help: 'Alles zählt: Handy, Laptop, Tablet, Konsole, Fernseher, Uhr, Drucker, Lautsprecher.',
+    options: [
+      { v: '1-3', label: '1 – 3' },
+      { v: '4-6', label: '4 – 6' },
+      { v: '7-12', label: '7 – 12' },
+      { v: '12plus', label: 'Mehr als 12' },
+    ],
+  },
+  {
+    id: 'updates',
+    section: 'devices',
+    core: true,
+    type: 'single',
+    q: 'Wie gehst du mit Updates um?',
+    options: [
+      { v: 'auto', label: 'Automatisch, ich merke es kaum' },
+      { v: 'days', label: 'Ich installiere sie innerhalb weniger Tage' },
+      { v: 'weeks', label: 'Ich schiebe sie oft wochenlang auf' },
+      { v: 'rarely', label: 'Nur wenn es sich nicht mehr vermeiden lässt' },
+      { v: 'unknown', label: 'Keine Ahnung, was da passiert' },
+    ],
+  },
+  {
+    id: 'screenlock',
+    section: 'devices',
+    type: 'single',
+    q: 'Wie ist dein Smartphone gesperrt?',
+    showIf: (a) => !has(a, 'phone_os', 'none'),
+    options: [
+      { v: 'bio-long', label: 'Gesicht/Fingerabdruck + langer Code (6+ Stellen)' },
+      { v: 'bio-4', label: 'Gesicht/Fingerabdruck + 4-stellige PIN' },
+      { v: 'pattern', label: 'Wischmuster' },
+      { v: 'pin-only', label: 'Nur PIN, keine Biometrie' },
+      { v: 'none', label: 'Gar nicht gesperrt' },
+    ],
+  },
+  {
+    id: 'disk_encryption',
+    section: 'devices',
+    type: 'single',
+    q: 'Ist die Festplatte deines Computers verschlüsselt?',
+    help: 'Bei Mac heißt das FileVault, bei Windows BitLocker oder "Geräteverschlüsselung".',
+    showIf: (a) => !has(a, 'computer_os', 'none'),
+    options: [
+      { v: 'yes', label: 'Ja' },
+      { v: 'no', label: 'Nein' },
+      { v: 'unknown', label: 'Weiß ich nicht' },
+    ],
+  },
+  {
+    id: 'antivirus',
+    section: 'devices',
+    type: 'single',
+    q: 'Welchen Virenschutz nutzt du?',
+    showIf: (a) => !has(a, 'computer_os', 'none'),
+    options: [
+      { v: 'builtin', label: 'Nur das, was im System eingebaut ist' },
+      { v: 'paid', label: 'Eine gekaufte Security-Suite' },
+      { v: 'free-third', label: 'Ein kostenloses Programm eines Drittanbieters' },
+      { v: 'none', label: 'Gar keinen' },
+      { v: 'unknown', label: 'Weiß ich nicht' },
+    ],
+  },
+  {
+    id: 'admin_account',
+    section: 'devices',
+    type: 'single',
+    q: 'Arbeitest du am Computer mit Administratorrechten?',
+    showIf: (a) => !has(a, 'computer_os', 'none'),
+    options: [
+      { v: 'standard', label: 'Nein, ich habe ein normales Benutzerkonto' },
+      { v: 'admin', label: 'Ja, mein Alltagskonto ist Administrator' },
+      { v: 'unknown', label: 'Weiß ich nicht' },
+    ],
+  },
+  {
+    id: 'old_devices',
+    section: 'devices',
+    type: 'single',
+    q: 'Nutzt du Geräte weiter, die keine Updates mehr bekommen?',
+    help: 'Typisch: ein altes Tablet für Rezepte, ein Zweithandy, ein alter Laptop im Keller.',
+    options: [
+      { v: 'yes-online', label: 'Ja, und sie hängen am Netz' },
+      { v: 'yes-offline', label: 'Ja, aber ohne Internetzugang' },
+      { v: 'no', label: 'Nein' },
+      { v: 'unknown', label: 'Weiß ich nicht' },
+    ],
+  },
+
+  // ------------------------------------------------------------- accounts ---
+  {
+    id: 'password_manager',
+    section: 'accounts',
+    core: true,
+    type: 'single',
+    q: 'Wie verwaltest du deine Passwörter?',
+    options: [
+      { v: 'dedicated', label: 'Mit einem echten Passwortmanager (Bitwarden, 1Password, KeePass …)' },
+      { v: 'ecosystem', label: 'Mit dem Manager von Apple oder Google' },
+      { v: 'browser', label: 'Im Browser gespeichert' },
+      { v: 'notes', label: 'In einer Notiz-App, Excel oder auf Papier' },
+      { v: 'memory', label: 'Im Kopf' },
+      { v: 'mixed', label: 'Ein bisschen von allem' },
+    ],
+  },
+  {
+    id: 'password_reuse',
+    section: 'accounts',
+    core: true,
+    type: 'single',
+    q: 'Wie oft benutzt du dasselbe Passwort mehrfach?',
+    help: 'Auch Varianten wie "Sommer2024!" und "Sommer2025!" zählen als dasselbe Passwort.',
+    options: [
+      { v: 'never', label: 'Nie — jedes Konto hat ein eigenes' },
+      { v: 'few', label: 'Bei ein paar unwichtigen Diensten' },
+      { v: 'many', label: 'Bei vielen Diensten' },
+      { v: 'mostly', label: 'Ich habe im Grunde zwei, drei Passwörter für alles' },
+    ],
+  },
+  {
+    id: 'password_strength',
+    section: 'accounts',
+    type: 'single',
+    q: 'Wie sehen deine Passwörter typischerweise aus?',
+    options: [
+      { v: 'random', label: 'Lang und zufällig generiert' },
+      { v: 'passphrase', label: 'Lange Wortkombinationen, die ich mir merke' },
+      { v: 'mixed', label: 'Gemischt — mal stark, mal schwach' },
+      { v: 'simple', label: 'Kurz und merkbar, oft mit Zahl und Ausrufezeichen' },
+    ],
+  },
+  {
+    id: 'mfa_usage',
+    section: 'accounts',
+    core: true,
+    type: 'single',
+    q: 'Nutzt du Zwei-Faktor-Authentifizierung?',
+    options: [
+      { v: 'everywhere', label: 'Überall, wo es angeboten wird' },
+      { v: 'important', label: 'Bei den wichtigen Konten (Mail, Bank)' },
+      { v: 'some', label: 'Bei ein paar Diensten' },
+      { v: 'forced', label: 'Nur wo ich gezwungen werde' },
+      { v: 'none', label: 'Nirgends' },
+      { v: 'unknown', label: 'Ich weiß nicht genau, was das ist' },
+    ],
+  },
+  {
+    id: 'mfa_type',
+    section: 'accounts',
+    type: 'multi',
+    q: 'Welche zweiten Faktoren nutzt du?',
+    help: 'Mehrfachauswahl. Die Art macht einen enormen Unterschied.',
+    showIf: (a) => !hasAny(a, 'mfa_usage', ['none', 'unknown']),
+    options: [
+      { v: 'passkey', label: 'Passkeys (Gesicht/Fingerabdruck statt Passwort)' },
+      { v: 'hardware', label: 'Hardware-Schlüssel (YubiKey o. ä.)' },
+      { v: 'totp', label: 'Authenticator-App mit 6-stelligem Code' },
+      { v: 'push', label: 'Push-Bestätigung in einer App' },
+      { v: 'sms', label: 'Code per SMS' },
+      { v: 'email', label: 'Code per E-Mail' },
+    ],
+  },
+  {
+    id: 'email_provider',
+    section: 'accounts',
+    core: true,
+    type: 'single',
+    q: 'Bei wem liegt deine wichtigste E-Mail-Adresse?',
+    help: 'Also die, an die Passwort-Zurücksetzungen gehen.',
+    options: [
+      { v: 'gmail', label: 'Gmail' },
+      { v: 'apple', label: 'iCloud / Apple' },
+      { v: 'microsoft', label: 'Outlook / Hotmail / Live' },
+      { v: 'de-freemail', label: 'GMX, Web.de, Freenet' },
+      { v: 'isp', label: 'Vom Internetanbieter (t-online, vodafone …)' },
+      { v: 'own-domain', label: 'Eigene Domain / eigener Anbieter' },
+      { v: 'other', label: 'Etwas anderes' },
+    ],
+  },
+  {
+    id: 'email_separation',
+    section: 'accounts',
+    type: 'single',
+    q: 'Wie viele E-Mail-Adressen benutzt du aktiv?',
+    options: [
+      { v: 'one', label: 'Eine für alles' },
+      { v: 'two-three', label: 'Zwei bis drei' },
+      { v: 'separated', label: 'Mehrere, bewusst getrennt (wichtig / Shopping / Newsletter)' },
+      { v: 'aliases', label: 'Ich nutze Aliase oder Wegwerf-Adressen pro Dienst' },
+    ],
+  },
+  {
+    id: 'breach_check',
+    section: 'accounts',
+    core: true,
+    type: 'single',
+    q: 'Hast du schon mal geprüft, ob deine Daten in einem Leak aufgetaucht sind?',
+    help: 'Zum Beispiel über haveibeenpwned.com oder den HPI Identity Leak Checker.',
+    options: [
+      { v: 'recent', label: 'Ja, im letzten halben Jahr' },
+      { v: 'long-ago', label: 'Ja, ist aber lange her' },
+      { v: 'heard', label: 'Kenne ich, aber nie gemacht' },
+      { v: 'never', label: 'Nein, noch nie' },
+    ],
+  },
+  {
+    id: 'known_breach',
+    section: 'accounts',
+    type: 'single',
+    q: 'Weißt du von einem Leak, in dem du vorkommst?',
+    options: [
+      { v: 'yes-changed', label: 'Ja — und ich habe die Passwörter geändert' },
+      { v: 'yes-nothing', label: 'Ja — geändert habe ich nichts' },
+      { v: 'no', label: 'Nein' },
+      { v: 'unknown', label: 'Keine Ahnung' },
+    ],
+  },
+  {
+    id: 'recovery_setup',
+    section: 'accounts',
+    type: 'multi',
+    q: 'Wie kommst du wieder rein, wenn du aus deinem Hauptkonto ausgesperrt wirst?',
+    help: 'Mehrfachauswahl. Das ist die Frage, die fast alle unterschätzen.',
+    options: [
+      { v: 'codes', label: 'Ich habe Wiederherstellungscodes ausgedruckt oder offline gespeichert' },
+      { v: 'second-device', label: 'Ein zweites Gerät mit Zugriff' },
+      { v: 'phone', label: 'Über meine Handynummer' },
+      { v: 'second-email', label: 'Über eine zweite E-Mail-Adresse' },
+      { v: 'trusted-person', label: 'Über eine Vertrauensperson (Kontowiederherstellung)' },
+      { v: 'nothing', label: 'Gar nicht — daran habe ich nie gedacht', exclusive: true },
+    ],
+  },
+  {
+    id: 'account_count',
+    section: 'accounts',
+    type: 'single',
+    q: 'Wie viele Online-Konten hast du ungefähr?',
+    options: [
+      { v: 'u20', label: 'Weniger als 20' },
+      { v: '20-50', label: '20 – 50' },
+      { v: '50-100', label: '50 – 100' },
+      { v: '100plus', label: 'Über 100' },
+      { v: 'unknown', label: 'Keine Vorstellung' },
+    ],
+  },
+  {
+    id: 'old_accounts',
+    section: 'accounts',
+    type: 'single',
+    q: 'Hast du alte Konten, die du nicht mehr nutzt, aber auch nie gelöscht hast?',
+    options: [
+      { v: 'many', label: 'Ja, viele' },
+      { v: 'some', label: 'Ein paar' },
+      { v: 'no', label: 'Nein, ich räume auf' },
+      { v: 'unknown', label: 'Weiß ich nicht' },
+    ],
+  },
+
+  // ---------------------------------------------------------------- money ---
+  {
+    id: 'online_banking',
+    section: 'money',
+    core: true,
+    type: 'single',
+    q: 'Wie machst du Bankgeschäfte?',
+    options: [
+      { v: 'app', label: 'Nur über die Banking-App' },
+      { v: 'browser', label: 'Im Browser am Computer' },
+      { v: 'both', label: 'Beides' },
+      { v: 'branch', label: 'Gar nicht online' },
+    ],
+  },
+  {
+    id: 'banking_tan',
+    section: 'money',
+    type: 'single',
+    q: 'Wie bestätigst du Überweisungen?',
+    showIf: (a) => !has(a, 'online_banking', 'branch'),
+    options: [
+      { v: 'same-device', label: 'Freigabe in einer App auf demselben Handy' },
+      { v: 'other-device', label: 'Freigabe auf einem zweiten Gerät' },
+      { v: 'chiptan', label: 'Mit einem TAN-Generator / chipTAN-Gerät' },
+      { v: 'phototan', label: 'photoTAN mit separatem Lesegerät' },
+      { v: 'sms', label: 'Per SMS-TAN' },
+      { v: 'unknown', label: 'Weiß ich nicht genau' },
+    ],
+  },
+  {
+    id: 'payment_services',
+    section: 'money',
+    type: 'multi',
+    q: 'Welche Bezahldienste nutzt du?',
+    options: [
+      { v: 'paypal', label: 'PayPal' },
+      { v: 'klarna', label: 'Klarna / Rechnungskauf' },
+      { v: 'wallet', label: 'Apple Pay / Google Pay' },
+      { v: 'amazon', label: 'Amazon mit hinterlegter Zahlung' },
+      { v: 'card-stored', label: 'Kreditkarte in vielen Shops gespeichert' },
+      { v: 'none', label: 'Keine davon', exclusive: true },
+    ],
+  },
+  {
+    id: 'crypto',
+    section: 'money',
+    core: true,
+    type: 'single',
+    q: 'Hast du Kryptowährungen?',
+    options: [
+      { v: 'none', label: 'Nein' },
+      { v: 'exchange', label: 'Ja, auf einer Börse (Coinbase, Binance, Bitpanda …)' },
+      { v: 'hot', label: 'Ja, in einer Wallet auf Handy oder PC' },
+      { v: 'hardware', label: 'Ja, auf einer Hardware-Wallet' },
+      { v: 'significant', label: 'Ja, und es ist ein relevanter Teil meines Vermögens' },
+    ],
+  },
+  {
+    id: 'crypto_seed',
+    section: 'money',
+    type: 'single',
+    q: 'Wo liegt deine Seed-Phrase / dein Wiederherstellungssatz?',
+    showIf: (a) => hasAny(a, 'crypto', ['hot', 'hardware', 'significant']),
+    options: [
+      { v: 'steel', label: 'Offline auf Metall oder Papier, sicher verwahrt' },
+      { v: 'paper-home', label: 'Auf Papier irgendwo in der Wohnung' },
+      { v: 'manager', label: 'Im Passwortmanager' },
+      { v: 'cloud', label: 'Als Foto oder Notiz in der Cloud' },
+      { v: 'none', label: 'Habe ich nicht / weiß ich nicht' },
+    ],
+  },
+  {
+    id: 'broker',
+    section: 'money',
+    type: 'single',
+    q: 'Hast du ein Wertpapierdepot?',
+    options: [
+      { v: 'significant', label: 'Ja, mit nennenswertem Betrag' },
+      { v: 'small', label: 'Ja, kleiner Betrag' },
+      { v: 'no', label: 'Nein' },
+    ],
+  },
+  {
+    id: 'financial_exposure',
+    section: 'money',
+    type: 'single',
+    q: 'Wie viel Geld könnte jemand theoretisch bewegen, der alle deine digitalen Zugänge hätte?',
+    help: 'Grobe Schätzung. Diese Zahl bleibt auf deinem Gerät.',
+    options: [
+      { v: 'u1k', label: 'Unter 1.000 €' },
+      { v: '1-10k', label: '1.000 – 10.000 €' },
+      { v: '10-100k', label: '10.000 – 100.000 €' },
+      { v: 'o100k', label: 'Über 100.000 €' },
+      { v: 'skip', label: 'Möchte ich nicht angeben' },
+    ],
+  },
+
+  // ------------------------------------------------------------- behavior ---
+  {
+    id: 'homeoffice',
+    section: 'behavior',
+    core: true,
+    type: 'single',
+    q: 'Arbeitest du von zu Hause?',
+    options: [
+      { v: 'never', label: 'Nein, nie' },
+      { v: 'hybrid', label: 'Teilweise' },
+      { v: 'remote', label: 'Praktisch vollständig remote' },
+      { v: 'na', label: 'Nicht zutreffend' },
+    ],
+  },
+  {
+    id: 'work_mixing',
+    section: 'behavior',
+    type: 'single',
+    q: 'Wie stark vermischen sich Arbeit und Privates auf deinen Geräten?',
+    showIf: (a) => !has(a, 'homeoffice', 'na'),
+    options: [
+      { v: 'strict', label: 'Strikt getrennt' },
+      { v: 'private-on-work', label: 'Ich mache Privates auf dem Arbeitsgerät' },
+      { v: 'work-on-private', label: 'Ich mache Arbeit auf dem privaten Gerät' },
+      { v: 'both', label: 'Beides, alles läuft durcheinander' },
+    ],
+  },
+  {
+    id: 'work_sensitivity',
+    section: 'behavior',
+    type: 'single',
+    q: 'Wie sensibel sind die Daten, an die du beruflich kommst?',
+    showIf: (a) => !has(a, 'homeoffice', 'na'),
+    options: [
+      { v: 'critical', label: 'Sehr — Zugang zu Systemen, Geld oder vielen Personendaten' },
+      { v: 'personal', label: 'Personenbezogene Daten von Kunden oder Kollegen' },
+      { v: 'internal', label: 'Interne Unterlagen' },
+      { v: 'none', label: 'Nichts Sensibles' },
+    ],
+  },
+  {
+    id: 'travel',
+    section: 'behavior',
+    core: true,
+    type: 'single',
+    q: 'Wie oft bist du unterwegs — Reisen, Hotels, Bahn, Flughafen?',
+    options: [
+      { v: 'rarely', label: 'Selten' },
+      { v: 'few', label: 'Ein paar Mal im Jahr' },
+      { v: 'monthly', label: 'Monatlich' },
+      { v: 'constant', label: 'Ständig' },
+    ],
+  },
+  {
+    id: 'public_wifi',
+    section: 'behavior',
+    core: true,
+    type: 'single',
+    q: 'Wie nutzt du öffentliches WLAN?',
+    options: [
+      { v: 'never', label: 'Gar nicht — ich nutze mobile Daten' },
+      { v: 'rarely', label: 'Selten und nur für Unwichtiges' },
+      { v: 'regularly', label: 'Regelmäßig' },
+      { v: 'always', label: 'Immer, wenn eins verfügbar ist' },
+    ],
+  },
+  {
+    id: 'vpn',
+    section: 'behavior',
+    type: 'single',
+    q: 'Nutzt du ein VPN?',
+    options: [
+      { v: 'always', label: 'Ja, dauerhaft ein bezahltes VPN' },
+      { v: 'sometimes', label: 'Ja, in fremden Netzen' },
+      { v: 'work', label: 'Nur das VPN meines Arbeitgebers' },
+      { v: 'free', label: 'Ein kostenloses VPN' },
+      { v: 'none', label: 'Nein' },
+    ],
+  },
+  {
+    id: 'social_media',
+    section: 'behavior',
+    type: 'multi',
+    q: 'Welche sozialen Netzwerke nutzt du?',
+    options: [
+      { v: 'instagram', label: 'Instagram' },
+      { v: 'tiktok', label: 'TikTok' },
+      { v: 'facebook', label: 'Facebook' },
+      { v: 'linkedin', label: 'LinkedIn / Xing' },
+      { v: 'x', label: 'X / Bluesky / Mastodon' },
+      { v: 'reddit', label: 'Reddit / Foren' },
+      { v: 'youtube', label: 'YouTube (mit eigenem Kanal)' },
+      { v: 'snapchat', label: 'Snapchat' },
+      { v: 'none', label: 'Keine', exclusive: true },
+    ],
+  },
+  {
+    id: 'social_visibility',
+    section: 'behavior',
+    core: true,
+    type: 'single',
+    q: 'Wie öffentlich bist du dort?',
+    showIf: (a) => !has(a, 'social_media', 'none') && (a.social_media?.length ?? 0) > 0,
+    options: [
+      { v: 'private', label: 'Alles privat, nur Bekannte' },
+      { v: 'semi', label: 'Teils privat, teils offen' },
+      { v: 'public-name', label: 'Öffentlich mit Klarnamen' },
+      { v: 'public-reach', label: 'Öffentlich mit größerer Reichweite' },
+    ],
+  },
+  {
+    id: 'oversharing',
+    section: 'behavior',
+    type: 'multi',
+    q: 'Was davon findet man online über dich?',
+    help: 'Mehrfachauswahl. Das ist das Material, aus dem gezielte Angriffe gebaut werden.',
+    options: [
+      { v: 'birthday', label: 'Geburtsdatum' },
+      { v: 'address', label: 'Wohnort oder Adresse' },
+      { v: 'employer', label: 'Arbeitgeber und Position' },
+      { v: 'family', label: 'Namen von Familienmitgliedern' },
+      { v: 'kids-photos', label: 'Fotos meiner Kinder' },
+      { v: 'travel-live', label: 'Urlaube, während ich weg bin' },
+      { v: 'pets', label: 'Haustiernamen, Hobbys, Lieblingsverein' },
+      { v: 'phone', label: 'Meine Handynummer' },
+      { v: 'nothing', label: 'Praktisch nichts', exclusive: true },
+    ],
+  },
+  {
+    id: 'link_behavior',
+    section: 'behavior',
+    core: true,
+    type: 'single',
+    q: 'Du bekommst eine Mail von "DHL": Sendung konnte nicht zugestellt werden. Was tust du?',
+    options: [
+      { v: 'ignore', label: 'Löschen — ich klicke grundsätzlich keine Links in Mails' },
+      { v: 'app-check', label: 'Ich prüfe unabhängig in der App oder auf der echten Website' },
+      { v: 'inspect', label: 'Ich schaue mir Absender und Link genau an und entscheide dann' },
+      { v: 'plausible', label: 'Wenn ich ein Paket erwarte, klicke ich' },
+      { v: 'click', label: 'Ich klicke und schaue, was passiert' },
+    ],
+  },
+  {
+    id: 'unknown_calls',
+    section: 'behavior',
+    type: 'single',
+    q: 'Wie gehst du mit Anrufen unbekannter Nummern um?',
+    options: [
+      { v: 'never', label: 'Ich gehe nicht ran' },
+      { v: 'callback', label: 'Ich gehe ran, rufe aber bei Zweifeln über die offizielle Nummer zurück' },
+      { v: 'answer', label: 'Ich gehe ran und rede' },
+    ],
+  },
+  {
+    id: 'downloads',
+    section: 'behavior',
+    type: 'single',
+    q: 'Woher installierst du Software?',
+    options: [
+      { v: 'stores', label: 'Nur aus offiziellen App-Stores' },
+      { v: 'official-sites', label: 'Aus Stores und von Herstellerseiten' },
+      { v: 'anywhere', label: 'Auch mal von Download-Portalen oder aus Suchergebnissen' },
+      { v: 'cracks', label: 'Auch Cracks, Keygens, Torrents oder Mods' },
+    ],
+  },
+  {
+    id: 'gaming',
+    section: 'behavior',
+    core: true,
+    type: 'single',
+    q: 'Spielst du?',
+    options: [
+      { v: 'none', label: 'Nein' },
+      { v: 'mobile', label: 'Gelegentlich am Handy' },
+      { v: 'console', label: 'Konsole' },
+      { v: 'pc', label: 'PC-Gaming' },
+      { v: 'invested', label: 'Intensiv — mit Account, in dem viel Geld oder Zeit steckt' },
+    ],
+  },
+  {
+    id: 'gaming_platforms',
+    section: 'behavior',
+    type: 'multi',
+    q: 'Welche Plattformen?',
+    showIf: (a) => !has(a, 'gaming', 'none') && !!a.gaming,
+    options: [
+      { v: 'steam', label: 'Steam' },
+      { v: 'discord', label: 'Discord' },
+      { v: 'epic', label: 'Epic Games' },
+      { v: 'battlenet', label: 'Battle.net' },
+      { v: 'riot', label: 'Riot (LoL, Valorant)' },
+      { v: 'roblox', label: 'Roblox / Minecraft' },
+      { v: 'psn-xbox', label: 'PSN / Xbox' },
+      { v: 'mobile', label: 'Mobile Games mit Käufen' },
+    ],
+  },
+  {
+    id: 'gaming_trade',
+    section: 'behavior',
+    type: 'single',
+    q: 'Handelst du mit Items, Skins oder Accounts?',
+    showIf: (a) => hasAny(a, 'gaming', ['pc', 'invested', 'console']),
+    options: [
+      { v: 'yes', label: 'Ja' },
+      { v: 'sometimes', label: 'Ab und zu' },
+      { v: 'no', label: 'Nein' },
+    ],
+  },
+  {
+    id: 'ai_tools',
+    section: 'behavior',
+    type: 'single',
+    q: 'Gibst du persönliche oder berufliche Daten in KI-Tools ein?',
+    options: [
+      { v: 'often', label: 'Ja, regelmäßig' },
+      { v: 'sometimes', label: 'Gelegentlich, ohne groß nachzudenken' },
+      { v: 'careful', label: 'Nur bewusst und anonymisiert' },
+      { v: 'never', label: 'Nutze ich nicht' },
+    ],
+  },
+
+  // ----------------------------------------------------------------- home ---
+  {
+    id: 'router',
+    section: 'home',
+    core: true,
+    type: 'single',
+    q: 'Wie sieht es mit deinem Router aus?',
+    options: [
+      { v: 'default', label: 'Gerät vom Anbieter, nichts daran geändert' },
+      { v: 'changed', label: 'Gerät vom Anbieter, Passwörter geändert' },
+      { v: 'own', label: 'Eigener Router, den ich pflege' },
+      { v: 'unknown', label: 'Keine Ahnung, läuft halt' },
+    ],
+  },
+  {
+    id: 'router_updates',
+    section: 'home',
+    type: 'single',
+    q: 'Bekommt dein Router Updates?',
+    options: [
+      { v: 'auto', label: 'Automatisch' },
+      { v: 'manual', label: 'Ich mache das regelmäßig von Hand' },
+      { v: 'never', label: 'Noch nie gemacht' },
+      { v: 'unknown', label: 'Weiß ich nicht' },
+    ],
+  },
+  {
+    id: 'wifi_sharing',
+    section: 'home',
+    type: 'single',
+    q: 'Wer ist außer dir in deinem WLAN?',
+    options: [
+      { v: 'household', label: 'Nur mein Haushalt' },
+      { v: 'guests', label: 'Gäste bekommen ein separates Gäste-WLAN' },
+      { v: 'guests-main', label: 'Gäste kommen ins Haupt-WLAN' },
+      { v: 'shared', label: 'Ich teile es mit Nachbarn oder Mitbewohnern' },
+    ],
+  },
+  {
+    id: 'smart_home',
+    section: 'home',
+    type: 'multi',
+    q: 'Was davon hast du zu Hause?',
+    options: [
+      { v: 'speaker', label: 'Sprachassistent (Alexa, Google, HomePod)' },
+      { v: 'cam-in', label: 'Kamera in der Wohnung (auch Babyphone)' },
+      { v: 'cam-out', label: 'Außenkamera oder Türklingel mit Kamera' },
+      { v: 'lock', label: 'Smartes Türschloss' },
+      { v: 'heating', label: 'Smarte Heizung / Thermostate' },
+      { v: 'lights', label: 'Smarte Beleuchtung, Steckdosen' },
+      { v: 'tv', label: 'Smart-TV' },
+      { v: 'vacuum', label: 'Saugroboter' },
+      { v: 'alarm', label: 'Alarmanlage mit App' },
+      { v: 'none', label: 'Nichts davon', exclusive: true },
+    ],
+  },
+  {
+    id: 'nas',
+    section: 'home',
+    type: 'single',
+    q: 'Hast du einen Netzwerkspeicher, Server oder eine Festplatte am Router?',
+    options: [
+      { v: 'none', label: 'Nein' },
+      { v: 'local', label: 'Ja, nur im Heimnetz erreichbar' },
+      { v: 'remote', label: 'Ja, auch von außen erreichbar' },
+      { v: 'unknown', label: 'Ja, aber ich weiß nicht wie es konfiguriert ist' },
+    ],
+  },
+  {
+    id: 'port_forwarding',
+    section: 'home',
+    type: 'single',
+    q: 'Ist irgendetwas bei dir aus dem Internet direkt erreichbar?',
+    help: 'Portfreigaben, DynDNS, ein Gameserver, eine Kamera-App mit Fernzugriff.',
+    options: [
+      { v: 'no', label: 'Nein' },
+      { v: 'yes-managed', label: 'Ja, bewusst eingerichtet und abgesichert' },
+      { v: 'yes', label: 'Ja, irgendwann mal eingerichtet' },
+      { v: 'unknown', label: 'Weiß ich nicht' },
+    ],
+  },
+
+  // ----------------------------------------------------------------- data ---
+  {
+    id: 'backup',
+    section: 'data',
+    core: true,
+    type: 'single',
+    q: 'Wie sicherst du deine Daten?',
+    options: [
+      { v: '321', label: 'Mehrere Kopien, davon eine außer Haus oder offline' },
+      { v: 'external', label: 'Regelmäßig auf eine externe Festplatte' },
+      { v: 'cloud', label: 'Die Cloud synchronisiert alles — das ist mein Backup' },
+      { v: 'manual', label: 'Ab und zu kopiere ich mal was' },
+      { v: 'none', label: 'Gar nicht' },
+    ],
+  },
+  {
+    id: 'backup_tested',
+    section: 'data',
+    type: 'single',
+    q: 'Hast du schon mal geprüft, ob sich das Backup zurückspielen lässt?',
+    showIf: (a) => !hasAny(a, 'backup', ['none']),
+    options: [
+      { v: 'yes', label: 'Ja' },
+      { v: 'no', label: 'Nein' },
+      { v: 'never-thought', label: 'Daran habe ich nie gedacht' },
+    ],
+  },
+  {
+    id: 'cloud_storage',
+    section: 'data',
+    type: 'multi',
+    q: 'Welche Cloud-Dienste nutzt du?',
+    options: [
+      { v: 'icloud', label: 'iCloud' },
+      { v: 'google', label: 'Google Drive / Fotos' },
+      { v: 'onedrive', label: 'OneDrive' },
+      { v: 'dropbox', label: 'Dropbox' },
+      { v: 'other', label: 'Andere' },
+      { v: 'none', label: 'Keine', exclusive: true },
+    ],
+  },
+  {
+    id: 'sensitive_docs',
+    section: 'data',
+    type: 'multi',
+    q: 'Was von dem liegt digital bei dir herum — in Mail, Cloud oder Galerie?',
+    help: 'Genau das ist die Beute, mit der Identitätsdiebstahl funktioniert.',
+    options: [
+      { v: 'id-scan', label: 'Ausweis- oder Passkopien' },
+      { v: 'contracts', label: 'Verträge, Gehaltsabrechnungen, Steuerunterlagen' },
+      { v: 'health', label: 'Gesundheitsunterlagen' },
+      { v: 'passwords-note', label: 'Eine Liste mit Zugangsdaten' },
+      { v: 'intimate', label: 'Intime Fotos' },
+      { v: 'banking-docs', label: 'Kontoauszüge, Kreditkartenfotos' },
+      { v: 'nothing', label: 'Nichts davon', exclusive: true },
+    ],
+  },
+  {
+    id: 'photos_value',
+    section: 'data',
+    type: 'single',
+    q: 'Wie schlimm wäre es, alle deine Fotos zu verlieren?',
+    options: [
+      { v: 'catastrophic', label: 'Unersetzlich — das wäre der schlimmste Teil' },
+      { v: 'bad', label: 'Ärgerlich, aber verkraftbar' },
+      { v: 'ok', label: 'Ziemlich egal' },
+    ],
+  },
+  {
+    id: 'digital_legacy',
+    section: 'data',
+    type: 'single',
+    q: 'Käme jemand an deine wichtigen Konten, wenn dir etwas zustößt?',
+    options: [
+      { v: 'yes', label: 'Ja, das ist geregelt' },
+      { v: 'partly', label: 'Teilweise / eine Person weiß ungefähr Bescheid' },
+      { v: 'no', label: 'Nein' },
+    ],
+  },
+  {
+    id: 'past_incident',
+    section: 'data',
+    core: true,
+    type: 'multi',
+    q: 'Ist dir schon mal etwas davon passiert?',
+    help: 'Mehrfachauswahl. Wer einmal getroffen wurde, wird häufiger erneut angegriffen.',
+    options: [
+      { v: 'account-hacked', label: 'Ein Konto wurde übernommen' },
+      { v: 'phishing', label: 'Ich bin auf eine Phishing-Seite reingefallen' },
+      { v: 'card-fraud', label: 'Abbuchungen von Karte oder Konto, die ich nicht war' },
+      { v: 'malware', label: 'Schadsoftware auf einem Gerät' },
+      { v: 'ransomware', label: 'Daten wurden verschlüsselt / Erpressung' },
+      { v: 'scam-money', label: 'Ich habe bei einem Betrug Geld verloren' },
+      { v: 'identity', label: 'Jemand hat in meinem Namen bestellt oder Konten eröffnet' },
+      { v: 'harassment', label: 'Stalking, Belästigung, Doxxing' },
+      { v: 'device-lost', label: 'Gerät verloren oder gestohlen' },
+      { v: 'none', label: 'Nichts davon', exclusive: true },
+    ],
+  },
+  {
+    id: 'worry',
+    section: 'data',
+    core: true,
+    type: 'multi',
+    q: 'Was macht dir am meisten Sorgen?',
+    help: 'Beeinflusst nicht das Risiko, aber die Reihenfolge deines Plans.',
+    options: [
+      { v: 'money', label: 'Finanzieller Schaden' },
+      { v: 'privacy', label: 'Dass Fremde meine privaten Daten sehen' },
+      { v: 'kids', label: 'Meine Kinder' },
+      { v: 'work', label: 'Berufliche Konsequenzen' },
+      { v: 'reputation', label: 'Mein Ruf / peinliche Inhalte' },
+      { v: 'dataloss', label: 'Fotos und Dokumente für immer zu verlieren' },
+      { v: 'control', label: 'Die Kontrolle über meine Konten zu verlieren' },
+      { v: 'nothing', label: 'Nichts Konkretes — ich will nur wissen, wo ich stehe', exclusive: true },
+    ],
+  },
+]
+
+/** Fragen, die im aktuellen Antwortstand tatsächlich angezeigt werden. */
+export function visibleQuestions(answers, mode = 'full') {
+  return QUESTIONS.filter((q) => {
+    if (mode === 'quick' && !q.core) return false
+    if (q.showIf && !q.showIf(answers)) return false
+    return true
+  })
+}
+
+/** Sektionen mit ihren sichtbaren Fragen — Basis für die Fortschrittsanzeige. */
+export function visibleSections(answers, mode = 'full') {
+  const qs = visibleQuestions(answers, mode)
+  return SECTIONS.map((s) => ({
+    ...s,
+    questions: qs.filter((q) => q.section === s.id),
+  })).filter((s) => s.questions.length > 0)
+}
+
+export const QUESTION_BY_ID = Object.fromEntries(QUESTIONS.map((q) => [q.id, q]))
+
+/** Lesbares Label für eine gegebene Antwort — für Report und Export. */
+export function answerLabel(qid, value) {
+  const q = QUESTION_BY_ID[qid]
+  if (!q || value == null) return null
+  if (q.type === 'scale') {
+    return q.scale.find((s) => s.v === value)?.label ?? String(value)
+  }
+  const pick = (v) => q.options?.find((o) => o.v === v)?.label ?? String(v)
+  return Array.isArray(value) ? value.map(pick).join(', ') : pick(value)
+}
